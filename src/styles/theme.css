@@ -1,0 +1,45 @@
+:root{
+  --google-blue: #4285F4;
+  --google-red: #DB4437;
+  --google-yellow: #F4B400;
+  --google-green: #0F9D58;
+  --google-bg: #F8F9FA;
+  --google-surface: #FFFFFF;
+  --google-text-dark: #202124;
+  --google-text-light: #5F6368;
+
+  --card-radius: 14px;
+  --card-shadow: 0 8px 30px rgba(32,33,36,0.08);
+}
+
+/* Card helpers */
+.card {
+  background: var(--google-surface);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+}
+
+/* Small helpers */
+.badge-google {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .25rem .5rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: .9rem;
+}
+
+/* Mobile friendly tweaks */
+@media (max-width: 1024px){
+  .lg-hide { display: none; }
+}
+
+/* Minimal overrides for tailwind components consistency */
+.btn-primary {
+  background: linear-gradient(90deg, var(--google-blue), #6a8cff);
+  color: white;
+  padding: .6rem 1.1rem;
+  border-radius: 10px;
+  font-weight: 700;
+}

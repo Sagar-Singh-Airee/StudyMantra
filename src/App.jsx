@@ -1,41 +1,64 @@
 // src/App.jsx
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+
 import { StudySessionProvider } from './context/StudySessionContext';
 import { AuthProvider } from './context/AuthContext';
+
+// Layout Components
+import Sidebar from './components/Sidebar';
+import Header from './components/Header';
+
+// Pages
 import Home from './pages/Home';
 import SetupGoals from './pages/SetupGoals';
 import UploadPDF from './pages/UploadPDF';
 import StudySession from './pages/StudySession';
 import Quiz from './pages/Quiz';
 import Analytics from './pages/Analytics';
-import VideoRoom from './pages/VideoRoom'; // NEW
+import VideoRoom from './pages/VideoRoom';
 
 function App() {
   return (
     <AuthProvider>
       <StudySessionProvider>
         <Router>
-          <div className="min-h-screen">
-            <Toaster 
-              position="top-right"
-              toastOptions={{
-                duration: 3000,
-                style: {
-                  background: '#363636',
-                  color: '#fff',
-                },
-              }}
-            />
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/setup" element={<SetupGoals />} />
-              <Route path="/upload" element={<UploadPDF />} />
-              <Route path="/study" element={<StudySession />} />
-              <Route path="/quiz" element={<Quiz />} />
-              <Route path="/analytics" element={<Analytics />} />
-              <Route path="/video" element={<VideoRoom />} /> {/* NEW */}
-            </Routes>
+          {/* Toast Notifications */}
+          <Toaster 
+            position="top-right"
+            toastOptions={{
+              duration: 3000,
+              style: {
+                background: '#363636',
+                color: '#fff',
+              },
+            }}
+          />
+
+          {/* Main Layout */}
+          <div className="min-h-screen flex bg-[var(--google-bg)]">
+
+            {/* Sidebar */}
+            <Sidebar />
+
+            {/* Main Content + Header */}
+            <div className="flex-1 p-6">
+              <Header />
+
+              {/* Page Content */}
+              <main className="mt-4">
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/setup" element={<SetupGoals />} />
+                  <Route path="/upload" element={<UploadPDF />} />
+                  <Route path="/study" element={<StudySession />} />
+                  <Route path="/quiz" element={<Quiz />} />
+                  <Route path="/analytics" element={<Analytics />} />
+                  <Route path="/video" element={<VideoRoom />} />
+                </Routes>
+              </main>
+            </div>
+
           </div>
         </Router>
       </StudySessionProvider>
