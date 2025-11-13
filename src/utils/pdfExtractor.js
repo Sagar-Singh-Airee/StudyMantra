@@ -1,26 +1,46 @@
-import * as pdfjsLib from 'pdfjs-dist';
+// src/utils/pdfExtractor.js
 
-// Set worker path
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// pdfjs ES modules work perfectly with Vite
+import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist/legacy/build/pdf';
 
+// Import the worker as a Vite url
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
+
+// Set worker source
+GlobalWorkerOptions.workerSrc = pdfWorker;
+
+/**
+ * Extract text from PDF file
+ */
 export async function extractTextFromPDF(file) {
   try {
     const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    
+
+    // Load PDF
+    const pdf = await getDocument({ data: arrayBuffer }).promise;
+
     let fullText = '';
-    
-    // Extract text from all pages
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
+
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum);
       const textContent = await page.getTextContent();
-      const pageText = textContent.items.map(item => item.str).join(' ');
-      fullText += pageText + '\n\n';
+
+      const strings = textContent.items
+        .map(item => item.str || '')
+        .join(' ');
+
+      const cleaned = strings.replace(/\s+/g, ' ').trim();
+      fullText += cleaned + '\n\n';
     }
-    
+
+    if (!fullText.trim()) {
+      throw new Error("PDF contains no extractable text");
+    }
+
     return fullText.trim();
+
   } catch (error) {
-    console.error('Error extracting PDF:', error);
-    throw new Error('Failed to extract text from PDF');
+    console.error("PDF Extraction Error:", error);
+    throw new Error("Failed to process PDF");
   }
 }

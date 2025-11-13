@@ -1,3 +1,4 @@
+// src/pages/StudySession.jsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, Clock, ArrowRight } from 'lucide-react';
@@ -34,6 +35,11 @@ function StudySession() {
     navigate('/quiz');
   };
 
+  const joinStudyRoom = () => {
+    // navigate to the video route
+    navigate('/video');
+  };
+
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-6xl mx-auto">
@@ -47,13 +53,23 @@ function StudySession() {
                 <p className="text-gray-600">{studyData.pdfFileName || 'Your Material'}</p>
               </div>
             </div>
-            <button
-              onClick={startQuizNow}
-              className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition"
-            >
-              Start Quiz Now
-              <ArrowRight className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={startQuizNow}
+                className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition"
+              >
+                Start Quiz Now
+                <ArrowRight className="w-5 h-5" />
+              </button>
+
+              {/* JOIN STUDY ROOM BUTTON */}
+              <button
+                onClick={joinStudyRoom}
+                className="flex items-center gap-2 bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition"
+              >
+                Join Study Room 🎥
+              </button>
+            </div>
           </div>
         </div>
 

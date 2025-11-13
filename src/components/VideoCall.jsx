@@ -4,8 +4,8 @@ import { Video, VideoOff, Mic, MicOff, PhoneOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // You need to get these from Agora Console (https://console.agora.io)
-const APP_ID = 'YOUR_AGORA_APP_ID';
-const CHANNEL = 'studymantra-room';
+const APP_ID = 'ef51dc25a99043caaba0f2cdc776ed94';
+const CHANNEL = 'StudyMantra-Room';
 
 function VideoCall({ onLeave }) {
   const [client] = useState(() => AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' }));
