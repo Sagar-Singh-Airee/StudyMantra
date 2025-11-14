@@ -55,6 +55,7 @@ function App() {
                   <Route path="/quiz" element={<Quiz />} />
                   <Route path="/analytics" element={<Analytics />} />
                   <Route path="/video" element={<VideoRoom />} />
+                  
                 </Routes>
               </main>
             </div>

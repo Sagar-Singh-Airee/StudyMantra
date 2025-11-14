@@ -2,14 +2,57 @@
 @tailwind components;
 @tailwind utilities;
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/* GOOGLE COLOR SYSTEM */
+:root {
+  --google-blue: #4285F4;
+  --google-red: #DB4437;
+  --google-yellow: #F4B400;
+  --google-green: #0F9D58;
+
+  /* DARK MODE AS DEFAULT */
+  --bg-primary: #0F0F0F;
+  --bg-secondary: #1A1A1A;
+  --text-primary: #FFFFFF;
+  --text-secondary: #AFAFAF;
+
+  --card-bg: #1E1E1E;
+  --border: #333333;
 }
 
+/* GLOBAL PAGE BACKGROUND */
 body {
-  font-family: 'Inter', system-ui, sans-serif;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
   min-height: 100vh;
+}
+
+/* CARD UI */
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+/* PRIMARY BUTTON */
+.btn-primary {
+  background: var(--google-blue);
+  color: white;
+  padding: 0.7rem 1.3rem;
+  border-radius: 10px;
+  font-weight: 600;
+  transition: 0.2s;
+}
+.btn-primary:hover {
+  opacity: 0.9;
+}
+
+/* FADE ANIMATION */
+.fade {
+  animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
