@@ -18,11 +18,15 @@ import Quiz from './pages/Quiz';
 import Analytics from './pages/Analytics';
 import VideoRoom from './pages/VideoRoom';
 
+// ⭐ NEW IMPORT: Assistant Page
+import AssistantPage from './pages/AssistantPage';
+
 function App() {
   return (
     <AuthProvider>
       <StudySessionProvider>
         <Router>
+
           {/* Toast Notifications */}
           <Toaster 
             position="top-right"
@@ -41,7 +45,7 @@ function App() {
             {/* Sidebar */}
             <Sidebar />
 
-            {/* Main Content + Header */}
+            {/* Main Area */}
             <div className="flex-1 p-6">
               <Header />
 
@@ -55,12 +59,15 @@ function App() {
                   <Route path="/quiz" element={<Quiz />} />
                   <Route path="/analytics" element={<Analytics />} />
                   <Route path="/video" element={<VideoRoom />} />
-                  
+
+                  {/* ⭐ NEW Assistant Page Route */}
+                  <Route path="/assistant" element={<AssistantPage />} />
                 </Routes>
               </main>
-            </div>
 
+            </div>
           </div>
+
         </Router>
       </StudySessionProvider>
     </AuthProvider>

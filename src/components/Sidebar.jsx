@@ -1,6 +1,6 @@
 // src/components/Sidebar.jsx
 import { Link, useLocation } from 'react-router-dom';
-import { Home, UploadCloud, BookOpen, BarChart2, Video, Settings, Sparkles, Trophy, ChevronRight } from 'lucide-react';
+import { Home, UploadCloud, BookOpen, BarChart2, Video, Settings, Sparkles, Trophy, ChevronRight, MessageSquare } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
 import teamLogo from '../assets/team-logo.png';
@@ -17,6 +17,8 @@ export default function Sidebar() {
     { to: '/video', icon: Video, label: 'Video Room', badge: 'New' },
     { to: '/quiz', icon: BookOpen, label: 'Quiz', badge: null },
     { to: '/analytics', icon: BarChart2, label: 'Analytics', badge: null },
+    // NEW Assistant item
+    { to: '/assistant', icon: MessageSquare, label: 'Assistant', badge: 'AI' },
     { to: '/settings', icon: Settings, label: 'Settings', badge: null },
   ];
 
@@ -30,6 +32,7 @@ export default function Sidebar() {
         onMouseEnter={() => setHoveredItem(to)}
         onMouseLeave={() => setHoveredItem(null)}
         className="relative group"
+        aria-current={active ? 'page' : undefined}
       >
         <motion.div
           initial={false}
@@ -71,7 +74,9 @@ export default function Sidebar() {
             <motion.span
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="px-2 py-1 bg-yellow-400 text-gray-900 text-xs font-bold rounded-full"
+              className={`px-2 py-1 text-xs font-bold rounded-full ${
+                badge === 'New' ? 'bg-yellow-400 text-gray-900' : 'bg-white/10 text-white/90'
+              }`}
             >
               {badge}
             </motion.span>
