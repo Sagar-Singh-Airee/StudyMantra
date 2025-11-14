@@ -1,26 +1,16 @@
+// src/pages/StudySession.jsx - FIXED VERSION
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  BookOpen,
-  ArrowRight,
-  Users,
-  Zap,
-  Target,
-  Trophy,
-  Clock,
-  Download,
-  MessageSquare,
-  Sparkles,
-  Bookmark,
-  Volume2,
-  Brain,
-  X,
-  Send,
-  Highlighter
+  BookOpen, ArrowRight, Users, Zap, Target, Trophy, Clock,
+  Download, MessageSquare, Sparkles, Bookmark, Volume2, Brain,
+  X, Send, Highlighter, Loader
 } from 'lucide-react';
 import EnhancedAgoraAssistant from '../components/EnhancedAgoraAssistant';
 import SharedStudyMode from '../components/SharedStudyMode';
 import toast from 'react-hot-toast';
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
 
 export default function StudySession() {
   const [material] = useState(`Understanding Quantum Computing
@@ -55,16 +45,38 @@ Despite their promise, quantum computers face significant challenges. Qubits are
   const [selectionButton, setSelectionButton] = useState({ visible: false, x: 0, y: 0 });
   const selectionRef = useRef(null);
 
-  // Shared session state
+  // Shared session state - FIXED
   const [sharedMode, setSharedMode] = useState(false);
   const [roomInfo, setRoomInfo] = useState(null);
+  const [isCreatingRoom, setIsCreatingRoom] = useState(false); // NEW: Loading state
+  
+  // Initialize currentUser properly - FIXED
   const [currentUser] = useState(() => {
+    // Try to get from localStorage first
     const saved = localStorage.getItem('sharedStudyUser');
-    return saved ? JSON.parse(saved) : {
-      id: `user-${Date.now()}`,
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to parse saved user:', e);
+      }
+    }
+    
+    // Generate new user if not found
+    const newUser = {
+      id: `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       name: 'Guest User',
-      role: 'participant'
+      role: 'host'
     };
+    
+    // Save for future use
+    try {
+      localStorage.setItem('sharedStudyUser', JSON.stringify(newUser));
+    } catch (e) {
+      console.error('Failed to save user:', e);
+    }
+    
+    return newUser;
   });
 
   // Study stats
@@ -74,8 +86,6 @@ Despite their promise, quantum computers face significant challenges. Qubits are
     totalStudyTime: 340,
     currentStreak: 7
   });
-
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
 
   // Update clock every second
   useEffect(() => {
@@ -100,7 +110,10 @@ Despite their promise, quantum computers face significant challenges. Qubits are
 
   // Text-to-speech
   const speakText = useCallback((text) => {
-    if (!('speechSynthesis' in window)) return;
+    if (!('speechSynthesis' in window)) {
+      toast.error('Text-to-speech not supported in this browser');
+      return;
+    }
     
     if (isSpeaking) {
       window.speechSynthesis.cancel();
@@ -111,6 +124,11 @@ Despite their promise, quantum computers face significant challenges. Qubits are
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.9;
     utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      toast.error('Speech failed');
+    };
+    
     window.speechSynthesis.speak(utterance);
     setIsSpeaking(true);
   }, [isSpeaking]);
@@ -147,36 +165,99 @@ Despite their promise, quantum computers face significant challenges. Qubits are
     };
   }, [handleTextSelection]);
 
-  // Shared session function
+  // FIXED: Shared session function with proper error handling
   const startSharedSession = async () => {
+    // Prevent multiple clicks
+    if (isCreatingRoom) {
+      console.log('Already creating room, ignoring click');
+      return;
+    }
+
+    // Validate user data
+    if (!currentUser || !currentUser.id || !currentUser.name) {
+      toast.error('User information missing. Please refresh the page.');
+      return;
+    }
+
+    // Validate API base URL
+    if (!API_BASE) {
+      toast.error('API configuration missing. Check .env file.');
+      console.error('VITE_API_BASE_URL not set');
+      return;
+    }
+
+    setIsCreatingRoom(true);
+    
     try {
+      console.log('Creating room with user:', currentUser);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
       const response = await fetch(`${API_BASE}/api/rooms/create`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify({
           docName: 'Quantum Computing Study',
           hostId: currentUser.id,
           hostName: currentUser.name,
           isPrivate: false,
         }),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
+
+      // Check response status
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Room creation failed:', response.status, errorText);
+        
+        let errorMessage = 'Failed to create room';
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          // Use default message
+        }
+        
+        throw new Error(errorMessage);
+      }
 
       const data = await response.json();
       
-      if (data.success) {
-        setRoomInfo({
-          roomId: data.roomId,
-          shareUrl: data.shareUrl,
-          isHost: true,
-        });
-        setSharedMode(true);
-        toast.success('Shared session created!');
-      } else {
-        throw new Error('Failed to create room');
+      console.log('Room created successfully:', data);
+      
+      if (!data.success || !data.roomId) {
+        throw new Error('Invalid response from server');
       }
+      
+      setRoomInfo({
+        roomId: data.roomId,
+        shareUrl: data.shareUrl,
+        channelName: data.channelName,
+        isHost: true,
+      });
+      
+      setSharedMode(true);
+      toast.success('Shared session created! 🎉');
+
     } catch (error) {
       console.error('Create room error:', error);
-      toast.error('Failed to start shared session');
+      
+      if (error.name === 'AbortError') {
+        toast.error('Request timeout. Check your connection.');
+      } else if (error.message.includes('fetch')) {
+        toast.error('Cannot connect to server. Is it running?');
+      } else {
+        toast.error(error.message || 'Failed to start shared session');
+      }
+      
+    } finally {
+      setIsCreatingRoom(false);
     }
   };
 
@@ -197,9 +278,10 @@ Despite their promise, quantum computers face significant challenges. Qubits are
     const blob = new Blob([material || ''], { type: 'text/plain;charset=utf-8' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `quantum-computing-notes.txt`;
+    a.download = `quantum-computing-notes-${Date.now()}.txt`;
     a.click();
     URL.revokeObjectURL(a.href);
+    toast.success('Notes exported!');
   };
 
   return (
@@ -233,19 +315,35 @@ Despite their promise, quantum computers face significant challenges. Qubits are
                 </div>
 
                 <div className="flex items-center gap-3">
+                  {/* FIXED: Start Shared Session Button */}
                   <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                    whileHover={!isCreatingRoom ? { scale: 1.02 } : {}}
+                    whileTap={!isCreatingRoom ? { scale: 0.98 } : {}}
                     onClick={startSharedSession}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm font-semibold shadow-md hover:shadow-lg transition-shadow"
+                    disabled={isCreatingRoom}
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold shadow-md transition-all ${
+                      isCreatingRoom
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:shadow-lg'
+                    }`}
                   >
-                    <Users className="w-4 h-4" />
-                    Start Shared Session
+                    {isCreatingRoom ? (
+                      <>
+                        <Loader className="w-4 h-4 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <Users className="w-4 h-4" />
+                        Start Shared Session
+                      </>
+                    )}
                   </motion.button>
 
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
+                    onClick={() => window.location.href = '/quiz'}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold shadow-md hover:shadow-lg transition-shadow"
                   >
                     <Brain className="w-4 h-4" />
@@ -444,10 +542,24 @@ Despite their promise, quantum computers face significant challenges. Qubits are
 
                 <button
                   onClick={startSharedSession}
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white text-purple-600 font-semibold text-sm shadow-lg hover:shadow-xl transition-shadow"
+                  disabled={isCreatingRoom}
+                  className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold shadow-lg transition-shadow ${
+                    isCreatingRoom
+                      ? 'bg-white/50 cursor-not-allowed'
+                      : 'bg-white text-purple-600 hover:shadow-xl'
+                  }`}
                 >
-                  <Users className="w-4 h-4" />
-                  Study Room
+                  {isCreatingRoom ? (
+                    <>
+                      <Loader className="w-4 h-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Users className="w-4 h-4" />
+                      Study Room
+                    </>
+                  )}
                 </button>
               </div>
             </div>
