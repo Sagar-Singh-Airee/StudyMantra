@@ -18,8 +18,10 @@ import Quiz from './pages/Quiz';
 import Analytics from './pages/Analytics';
 import VideoRoom from './pages/VideoRoom';
 
-// ⭐ NEW IMPORT: Assistant Page
+// New/Additional Pages
 import AssistantPage from './pages/AssistantPage';
+import JoinRoom from './pages/JoinRoom';
+import Settings from './pages/Settings'; // <-- ADDED: Settings page
 
 function App() {
   return (
@@ -60,8 +62,15 @@ function App() {
                   <Route path="/analytics" element={<Analytics />} />
                   <Route path="/video" element={<VideoRoom />} />
 
-                  {/* ⭐ NEW Assistant Page Route */}
+                  {/* Assistant & Join Room */}
                   <Route path="/assistant" element={<AssistantPage />} />
+                  <Route path="/join/:roomId" element={<JoinRoom />} />
+
+                  {/* Settings */}
+                  <Route path="/settings" element={<Settings />} />
+
+                  {/* Optional: fallback 404 route (uncomment if you add a NotFound page) */}
+                  {/* <Route path="*" element={<NotFound />} /> */}
                 </Routes>
               </main>
 

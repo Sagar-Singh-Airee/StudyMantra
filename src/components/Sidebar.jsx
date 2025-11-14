@@ -9,7 +9,6 @@ import agoraLogo from '../assets/agora-logo.png';
 export default function Sidebar() {
   const { pathname } = useLocation();
   const [hoveredItem, setHoveredItem] = useState(null);
-
   const navItems = [
     { to: '/', icon: Home, label: 'Home', badge: null },
     { to: '/upload', icon: UploadCloud, label: 'Upload Material', badge: null },
@@ -19,13 +18,12 @@ export default function Sidebar() {
     { to: '/analytics', icon: BarChart2, label: 'Analytics', badge: null },
     // NEW Assistant item
     { to: '/assistant', icon: MessageSquare, label: 'Assistant', badge: 'AI' },
+    // SETTINGS LINK (added with separation)
     { to: '/settings', icon: Settings, label: 'Settings', badge: null },
   ];
-
   const NavItem = ({ to, icon: Icon, label, badge }) => {
     const active = pathname === to;
     const isHovered = hoveredItem === to;
-
     return (
       <Link
         to={to}
@@ -56,19 +54,16 @@ export default function Sidebar() {
             }}
             className="absolute left-0 h-8 bg-white rounded-r-full"
           />
-
           {/* Icon */}
           <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
             active ? 'bg-white/20' : 'bg-white/10'
           }`}>
             <Icon className={`w-5 h-5 ${active ? 'text-white' : 'text-white/80'}`} />
           </div>
-
           {/* Label */}
           <span className={`font-semibold flex-1 ${active ? 'text-white' : 'text-white/90'}`}>
             {label}
           </span>
-
           {/* Badge */}
           {badge && (
             <motion.span
@@ -81,7 +76,6 @@ export default function Sidebar() {
               {badge}
             </motion.span>
           )}
-
           {/* Hover Arrow */}
           <motion.div
             initial={false}
@@ -96,13 +90,11 @@ export default function Sidebar() {
       </Link>
     );
   };
-
   return (
     <aside className="w-80 bg-gradient-to-b from-indigo-700 via-indigo-600 to-purple-600 text-white min-h-screen p-6 hidden lg:flex flex-col relative overflow-hidden">
       {/* Animated Background Blobs */}
       <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-pulse" />
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-
       <div className="relative z-10 flex flex-col h-full">
         {/* Brand Section */}
         <motion.div
@@ -126,7 +118,6 @@ export default function Sidebar() {
               <div className="text-sm text-white/80 font-medium">AI-Powered Learning</div>
             </div>
           </div>
-
           {/* Quick Stats */}
           <div className="grid grid-cols-2 gap-3">
             <motion.div
@@ -147,7 +138,6 @@ export default function Sidebar() {
             </motion.div>
           </div>
         </motion.div>
-
         {/* Navigation */}
         <motion.nav
           initial={{ opacity: 0 }}
@@ -155,7 +145,7 @@ export default function Sidebar() {
           transition={{ delay: 0.2 }}
           className="space-y-2 flex-1"
         >
-          {navItems.map((item, i) => (
+          {navItems.slice(0, -1).map((item, i) => (
             <motion.div
               key={item.to}
               initial={{ opacity: 0, x: -20 }}
@@ -165,8 +155,16 @@ export default function Sidebar() {
               <NavItem {...item} />
             </motion.div>
           ))}
+          {/* Separator for Settings */}
+          <div className="mt-4" />
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: navItems.length * 0.05 }}
+          >
+            <NavItem {...navItems[navItems.length - 1]} />
+          </motion.div>
         </motion.nav>
-
         {/* Agora Branding */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -175,7 +173,6 @@ export default function Sidebar() {
           className="mt-auto pt-6"
         >
           <div className="text-xs text-white/60 mb-3 font-medium">Powered by</div>
-
           <motion.div
             whileHover={{ scale: 1.02, boxShadow: "0 10px 30px rgba(0,0,0,0.2)" }}
             className="flex items-center gap-4 bg-white/10 backdrop-blur-sm p-4 rounded-2xl border border-white/20 cursor-pointer"
@@ -192,11 +189,10 @@ export default function Sidebar() {
               </div>
             </div>
           </motion.div>
-
           {/* Version Info */}
           <div className="mt-4 text-center">
             <div className="text-xs text-white/40">
-              Version 1.0.0 • Hackathon Build
+              Version 1.0 • Hackathon Build
             </div>
           </div>
         </motion.div>

@@ -1,8 +1,9 @@
-// server/index.js
+// server/index.js (UPDATED - Replace entire file)
 import express from "express";
 import cors from "cors";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
+import roomsRouter from "./routes/rooms.js";
 
 dotenv.config();
 
@@ -18,9 +19,13 @@ if (!OPENAI_API_KEY) {
   process.exit(1);
 }
 
+// Health check
 app.get("/api/health", (req, res) => res.json({ ok: true }));
 
-// Main assistant endpoint with multiple capabilities
+// Rooms routes
+app.use("/api/rooms", roomsRouter);
+
+// AI Assistant endpoint
 app.post("/api/ask", async (req, res) => {
   try {
     const { message = "", selectedText = "", mode = "explain" } = req.body;
@@ -28,36 +33,28 @@ app.post("/api/ask", async (req, res) => {
     let systemPrompt = "You are StudyMantra's friendly AI study assistant. Provide clear, concise, and helpful responses.";
     let userPrompt = message;
 
-    // Different modes for different features
     switch(mode) {
       case "explain":
         userPrompt = `Explain this concept clearly: "${selectedText}"\n\nUser's question: ${message}`;
         break;
-      
       case "summarize":
         userPrompt = `Provide a concise summary of: "${selectedText}"`;
         break;
-      
       case "examples":
         userPrompt = `Give 3 practical examples of: "${selectedText}"`;
         break;
-      
       case "definition":
         userPrompt = `Define this term and explain its significance: "${selectedText}"`;
         break;
-      
       case "simplify":
         userPrompt = `Explain this in simple terms as if to a beginner: "${selectedText}"`;
         break;
-      
       case "questions":
         userPrompt = `Generate 3 thought-provoking follow-up questions about: "${selectedText}"`;
         break;
-      
       case "flashcard":
         userPrompt = `Create a flashcard with front (question/term) and back (answer/definition) for: "${selectedText}". Format as JSON: {"front": "...", "back": "..."}`;
         break;
-      
       case "memory":
         userPrompt = `Provide a memory technique or mnemonic to remember: "${selectedText}"`;
         break;
@@ -167,7 +164,6 @@ Return ONLY valid JSON array with this exact format:
     const data = await openaiResp.json();
     let content = data.choices?.[0]?.message?.content ?? "[]";
     
-    // Extract JSON from markdown code blocks if present
     const jsonMatch = content.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/) || content.match(/(\[[\s\S]*\])/);
     
     if (jsonMatch) {
@@ -184,5 +180,7 @@ Return ONLY valid JSON array with this exact format:
 });
 
 app.listen(PORT, () => {
-  console.log(`✅ AI Assistant Server running on http://localhost:${PORT}`);
+  console.log(`✅ StudyMantra Server running on http://localhost:${PORT}`);
+  console.log(`📡 Agora App ID: ${process.env.AGORA_APP_ID ? '✓ Set' : '✗ Not Set'}`);
+  console.log(`🔑 Agora Certificate: ${process.env.AGORA_APP_CERTIFICATE ? '✓ Set' : '✗ Not Set'}`);
 });

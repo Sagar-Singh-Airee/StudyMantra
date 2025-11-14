@@ -19,6 +19,8 @@ import {
   Highlighter
 } from 'lucide-react';
 import EnhancedAgoraAssistant from '../components/EnhancedAgoraAssistant';
+import SharedStudyMode from '../components/SharedStudyMode';
+import toast from 'react-hot-toast';
 
 export default function StudySession() {
   const [material] = useState(`Understanding Quantum Computing
@@ -53,6 +55,18 @@ Despite their promise, quantum computers face significant challenges. Qubits are
   const [selectionButton, setSelectionButton] = useState({ visible: false, x: 0, y: 0 });
   const selectionRef = useRef(null);
 
+  // Shared session state
+  const [sharedMode, setSharedMode] = useState(false);
+  const [roomInfo, setRoomInfo] = useState(null);
+  const [currentUser] = useState(() => {
+    const saved = localStorage.getItem('sharedStudyUser');
+    return saved ? JSON.parse(saved) : {
+      id: `user-${Date.now()}`,
+      name: 'Guest User',
+      role: 'participant'
+    };
+  });
+
   // Study stats
   const [stats] = useState({
     completedQuizzes: 12,
@@ -60,6 +74,8 @@ Despite their promise, quantum computers face significant challenges. Qubits are
     totalStudyTime: 340,
     currentStreak: 7
   });
+
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
 
   // Update clock every second
   useEffect(() => {
@@ -131,6 +147,39 @@ Despite their promise, quantum computers face significant challenges. Qubits are
     };
   }, [handleTextSelection]);
 
+  // Shared session function
+  const startSharedSession = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/rooms/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          docName: 'Quantum Computing Study',
+          hostId: currentUser.id,
+          hostName: currentUser.name,
+          isPrivate: false,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setRoomInfo({
+          roomId: data.roomId,
+          shareUrl: data.shareUrl,
+          isHost: true,
+        });
+        setSharedMode(true);
+        toast.success('Shared session created!');
+      } else {
+        throw new Error('Failed to create room');
+      }
+    } catch (error) {
+      console.error('Create room error:', error);
+      toast.error('Failed to start shared session');
+    }
+  };
+
   const toggleBookmark = (index) => {
     setBookmarkedParagraphs(prev => {
       const newSet = new Set(prev);
@@ -183,15 +232,27 @@ Despite their promise, quantum computers face significant challenges. Qubits are
                   </div>
                 </div>
 
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold shadow-md hover:shadow-lg transition-shadow"
-                >
-                  <Brain className="w-4 h-4" />
-                  Start Quiz
-                  <ArrowRight className="w-4 h-4" />
-                </motion.button>
+                <div className="flex items-center gap-3">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={startSharedSession}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm font-semibold shadow-md hover:shadow-lg transition-shadow"
+                  >
+                    <Users className="w-4 h-4" />
+                    Start Shared Session
+                  </motion.button>
+
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold shadow-md hover:shadow-lg transition-shadow"
+                  >
+                    <Brain className="w-4 h-4" />
+                    Start Quiz
+                    <ArrowRight className="w-4 h-4" />
+                  </motion.button>
+                </div>
               </div>
             </div>
 
@@ -382,6 +443,7 @@ Despite their promise, quantum computers face significant challenges. Qubits are
                 </button>
 
                 <button
+                  onClick={startSharedSession}
                   className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white text-purple-600 font-semibold text-sm shadow-lg hover:shadow-xl transition-shadow"
                 >
                   <Users className="w-4 h-4" />
@@ -456,6 +518,22 @@ Despite their promise, quantum computers face significant challenges. Qubits are
               setShowAssistant(false); 
               setSelectedText(''); 
             }} 
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Shared Study Mode Component */}
+      <AnimatePresence>
+        {sharedMode && roomInfo && (
+          <SharedStudyMode
+            roomId={roomInfo.roomId}
+            isHost={roomInfo.isHost}
+            currentUser={currentUser}
+            material={material}
+            onClose={() => {
+              setSharedMode(false);
+              setRoomInfo(null);
+            }}
           />
         )}
       </AnimatePresence>
