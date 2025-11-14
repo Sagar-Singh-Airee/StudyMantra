@@ -19,6 +19,8 @@ function Quiz() {
   const [loading, setLoading] = useState(true);
   const [isCorrect, setIsCorrect] = useState(null);
   const [showExplanation, setShowExplanation] = useState(false);
+  const [quizDifficulty, setQuizDifficulty] = useState('medium');
+  const [useAI, setUseAI] = useState(true);
 
   useEffect(() => {
     const material = localStorage.getItem('studyMaterial');
@@ -28,15 +30,52 @@ function Quiz() {
       return;
     }
 
-    try {
-      const quiz = generateQuizFromText(material, 10);
-      setQuestions(quiz);
-      setLoading(false);
-    } catch (error) {
-      toast.error('Failed to generate quiz!');
-      navigate('/study');
-    }
-  }, [navigate]);
+    const generateQuiz = async () => {
+      if (useAI) {
+        try {
+          setLoading(true);
+          const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000'}/api/generate-quiz`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              text: material,
+              numQuestions: 10,
+              difficulty: quizDifficulty
+            })
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const data = await response.json();
+          if (data.questions && data.questions.length > 0) {
+            setQuestions(data.questions);
+            setLoading(false);
+            toast.success('AI Quiz generated successfully!');
+            return;
+          } else {
+            throw new Error('No questions returned from AI');
+          }
+        } catch (error) {
+          console.error('AI quiz failed, falling back to local:', error);
+          toast.error('AI quiz failed, using local generation');
+        }
+      }
+
+      // Fallback to local generation
+      try {
+        const quiz = generateQuizFromText(material, 10);
+        setQuestions(quiz);
+        setLoading(false);
+      } catch (error) {
+        toast.error('Failed to generate quiz!');
+        navigate('/study');
+      }
+    };
+
+    generateQuiz();
+  }, [navigate, quizDifficulty, useAI]);
 
   const handleAnswerSelect = (answer) => {
     if (isCorrect !== null) return;
@@ -78,12 +117,32 @@ function Quiz() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-        >
-          <Loader className="w-16 h-16 text-blue-600" />
-        </motion.div>
+        <div className="text-center">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            className="mb-4"
+          >
+            <Loader className="w-16 h-16 text-blue-600" />
+          </motion.div>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-gray-600 text-lg"
+          >
+            {useAI ? 'Generating AI Quiz...' : 'Generating Quiz...'}
+          </motion.p>
+          {useAI && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+              className="text-sm text-gray-500 mt-2"
+            >
+              This may take a few seconds
+            </motion.p>
+          )}
+        </div>
       </div>
     );
   }
@@ -235,6 +294,41 @@ function Quiz() {
         className="max-w-3xl w-full"
       >
         <div className="bg-white rounded-3xl p-8 shadow-2xl border border-gray-100">
+          {/* Quiz Settings Bar */}
+          <div className="flex items-center justify-between mb-6 p-4 bg-gray-50 rounded-2xl">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700">Difficulty:</label>
+                <select 
+                  value={quizDifficulty}
+                  onChange={(e) => setQuizDifficulty(e.target.value)}
+                  className="text-sm border border-gray-300 rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="easy">Easy</option>
+                  <option value="medium">Medium</option>
+                  <option value="hard">Hard</option>
+                </select>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700">AI Generation:</label>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={useAI}
+                    onChange={(e) => setUseAI(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+            </div>
+            
+            <div className="text-xs text-gray-500 bg-white px-3 py-1 rounded-full border">
+              {useAI ? '🤖 AI Powered' : '📚 Local'}
+            </div>
+          </div>
+
           <div className="mb-8">
             <div className="flex justify-between text-sm font-semibold mb-3">
               <span className="text-gray-600">
