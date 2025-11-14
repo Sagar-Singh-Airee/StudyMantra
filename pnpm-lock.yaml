@@ -11,6 +11,9 @@ importers:
       agora-rtc-sdk-ng:
         specifier: ^4.24.0
         version: 4.24.0
+      agora-rtm-sdk:
+        specifier: ^2.2.3-1
+        version: 2.2.3-1(agora-rtc-sdk-ng@4.24.0)
       axios:
         specifier: ^1.13.2
         version: 1.13.2
@@ -722,6 +725,11 @@ packages:
 
   agora-rte-extension@1.2.4:
     resolution: {integrity: sha512-0ovZz1lbe30QraG1cU+ji7EnQ8aUu+Hf3F+a8xPml3wPOyUQEK6CTdxV9kMecr9t+fIDrGeW7wgJTsM1DQE7Nw==}
+
+  agora-rtm-sdk@2.2.3-1:
+    resolution: {integrity: sha512-xeYhMnmieijBvL2nyeWS+bcQ3EHm83AY8HDVoxPpP4TzNoBO+HCwFpl11aYua2NIwqSGt4UpGUKYIb1Cqg7nZw==}
+    peerDependencies:
+      agora-rtc-sdk-ng: 4.23.0
 
   ajv@6.12.6:
     resolution: {integrity: sha512-j3fVLgvTo527anyYyJOGTYJbG+vnnQYvE0m5mmkc1TK+nxAppkCLMIL0aZ4dblVCNoGShhm+kzE4ZUykBoMg4g==}
@@ -2417,6 +2425,10 @@ snapshots:
       - debug
 
   agora-rte-extension@1.2.4: {}
+
+  agora-rtm-sdk@2.2.3-1(agora-rtc-sdk-ng@4.24.0):
+    dependencies:
+      agora-rtc-sdk-ng: 4.24.0
 
   ajv@6.12.6:
     dependencies:
