@@ -18,6 +18,7 @@ import {
   Send,
   Highlighter
 } from 'lucide-react';
+import EnhancedAgoraAssistant from '../components/EnhancedAgoraAssistant';
 
 export default function StudySession() {
   const [material] = useState(`Understanding Quantum Computing
@@ -50,8 +51,6 @@ Despite their promise, quantum computers face significant challenges. Qubits are
   const [selectedText, setSelectedText] = useState('');
   const [showAssistant, setShowAssistant] = useState(false);
   const [selectionButton, setSelectionButton] = useState({ visible: false, x: 0, y: 0 });
-  const [assistantMessages, setAssistantMessages] = useState([]);
-  const [assistantInput, setAssistantInput] = useState('');
   const selectionRef = useRef(null);
 
   // Study stats
@@ -143,28 +142,15 @@ Despite their promise, quantum computers face significant challenges. Qubits are
   const openAssistant = () => {
     setShowAssistant(true);
     setSelectionButton(s => ({ ...s, visible: false }));
-    if (selectedText && !assistantMessages.some(m => m.text === selectedText)) {
-      setAssistantMessages(prev => [...prev, { 
-        role: 'user', 
-        text: `Explain this: "${selectedText}"` 
-      }]);
-    }
   };
 
-  const sendAssistantMessage = () => {
-    if (!assistantInput.trim()) return;
-    
-    setAssistantMessages(prev => [...prev, { role: 'user', text: assistantInput }]);
-    
-    // Simulate AI response
-    setTimeout(() => {
-      setAssistantMessages(prev => [...prev, { 
-        role: 'assistant', 
-        text: `I'd be happy to help explain that! ${assistantInput.includes('quantum') ? 'Quantum computing uses the principles of quantum mechanics to process information in fundamentally different ways than classical computers.' : 'Let me break that down for you in simpler terms.'}`
-      }]);
-    }, 1000);
-    
-    setAssistantInput('');
+  const exportNotes = () => {
+    const blob = new Blob([material || ''], { type: 'text/plain;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `quantum-computing-notes.txt`;
+    a.click();
+    URL.revokeObjectURL(a.href);
   };
 
   return (
@@ -244,6 +230,7 @@ Despite their promise, quantum computers face significant challenges. Qubits are
                 </div>
 
                 <button
+                  onClick={exportNotes}
                   className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 text-sm transition-colors"
                 >
                   <Download className="w-4 h-4" />
@@ -460,97 +447,16 @@ Despite their promise, quantum computers face significant challenges. Qubits are
         )}
       </AnimatePresence>
 
-      {/* AI Assistant Dialog */}
+      {/* Enhanced AI Assistant Component */}
       <AnimatePresence>
         {showAssistant && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => setShowAssistant(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[600px] flex flex-col"
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between p-5 border-b border-gray-100">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white">
-                    <Sparkles className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-900">Agora Assistant</h3>
-                    <p className="text-sm text-gray-500">Ask anything about your study material</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowAssistant(false)}
-                  className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-5 space-y-4">
-                {assistantMessages.length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center mx-auto mb-4">
-                      <MessageSquare className="w-8 h-8 text-blue-600" />
-                    </div>
-                    <p className="text-gray-500 text-sm">
-                      {selectedText 
-                        ? "I'll explain the selected text. You can also ask me anything!"
-                        : "Select text or ask me anything about quantum computing!"}
-                    </p>
-                  </div>
-                ) : (
-                  assistantMessages.map((msg, i) => (
-                    <div
-                      key={i}
-                      className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div
-                        className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm ${
-                          msg.role === 'user'
-                            ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
-                            : 'bg-gray-100 text-gray-900'
-                        }`}
-                      >
-                        {msg.text}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              {/* Input */}
-              <div className="p-4 border-t border-gray-100">
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={assistantInput}
-                    onChange={(e) => setAssistantInput(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && sendAssistantMessage()}
-                    placeholder="Ask a question..."
-                    className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none text-sm"
-                  />
-                  <button
-                    onClick={sendAssistantMessage}
-                    disabled={!assistantInput.trim()}
-                    className="px-5 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium hover:shadow-lg transition-shadow disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Send className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
+          <EnhancedAgoraAssistant 
+            initialText={selectedText} 
+            onClose={() => { 
+              setShowAssistant(false); 
+              setSelectedText(''); 
+            }} 
+          />
         )}
       </AnimatePresence>
 
