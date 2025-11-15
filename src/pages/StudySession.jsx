@@ -1,43 +1,28 @@
-// src/pages/StudySession.jsx - FIXED VERSION
+// src/pages/StudySession.jsx - ENHANCED VERSION
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen, ArrowRight, Users, Zap, Target, Trophy, Clock,
   Download, MessageSquare, Sparkles, Bookmark, Volume2, Brain,
-  X, Send, Highlighter, Loader
+  X, Send, Highlighter, Loader, FileText, Search, Filter,
+  Eye, EyeOff, Share, RotateCcw, Play, Pause
 } from 'lucide-react';
+import { useStudySession } from '../context/StudySessionContext';
 import EnhancedAgoraAssistant from '../components/EnhancedAgoraAssistant';
 import SharedStudyMode from '../components/SharedStudyMode';
-import toast from 'react-hot-toast';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
 
 export default function StudySession() {
-  const [material] = useState(`Understanding Quantum Computing
-
-Quantum computing represents a revolutionary approach to information processing that leverages the principles of quantum mechanics. Unlike classical computers that use bits (0 or 1), quantum computers use quantum bits or qubits that can exist in multiple states simultaneously through a phenomenon called superposition.
-
-The Power of Superposition
-
-Superposition allows qubits to perform multiple calculations at once. When you measure a qubit, it collapses into either 0 or 1, but before measurement, it exists in a probability cloud of both states. This is fundamentally different from classical bits which must be definitively 0 or 1 at any given moment.
-
-Quantum Entanglement
-
-Another key principle is entanglement, where qubits become correlated in such a way that the state of one instantly influences the state of another, regardless of distance. Einstein famously called this "spooky action at a distance." This property enables quantum computers to solve certain problems exponentially faster than classical computers.
-
-Current Applications
-
-Today's quantum computers are being explored for optimization problems, drug discovery, cryptography, and machine learning. Companies like IBM, Google, and startups are racing to achieve "quantum supremacy" - the point where quantum computers can solve problems no classical computer can solve in a reasonable timeframe.
-
-Challenges Ahead
-
-Despite their promise, quantum computers face significant challenges. Qubits are extremely fragile and require near absolute-zero temperatures to function. Environmental noise can cause "decoherence," destroying the quantum state. Error correction in quantum systems is also far more complex than in classical computing.`);
-
+  const { studyData } = useStudySession();
+  const [material, setMaterial] = useState('');
   const [sessionStartTime] = useState(Date.now());
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [fontSize, setFontSize] = useState('base');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [bookmarkedParagraphs, setBookmarkedParagraphs] = useState(new Set());
+  const [readingProgress, setReadingProgress] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
   
   // Selection & Assistant state
   const [selectedText, setSelectedText] = useState('');
@@ -45,14 +30,20 @@ Despite their promise, quantum computers face significant challenges. Qubits are
   const [selectionButton, setSelectionButton] = useState({ visible: false, x: 0, y: 0 });
   const selectionRef = useRef(null);
 
-  // Shared session state - FIXED
+  // Enhanced features
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredMaterial, setFilteredMaterial] = useState([]);
+  const [showOnlyBookmarked, setShowOnlyBookmarked] = useState(false);
+  const [currentParagraph, setCurrentParagraph] = useState(0);
+  const [autoRead, setAutoRead] = useState(false);
+
+  // Shared session state
   const [sharedMode, setSharedMode] = useState(false);
   const [roomInfo, setRoomInfo] = useState(null);
-  const [isCreatingRoom, setIsCreatingRoom] = useState(false); // NEW: Loading state
+  const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   
-  // Initialize currentUser properly - FIXED
+  // Initialize currentUser
   const [currentUser] = useState(() => {
-    // Try to get from localStorage first
     const saved = localStorage.getItem('sharedStudyUser');
     if (saved) {
       try {
@@ -62,14 +53,12 @@ Despite their promise, quantum computers face significant challenges. Qubits are
       }
     }
     
-    // Generate new user if not found
     const newUser = {
       id: `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       name: 'Guest User',
       role: 'host'
     };
     
-    // Save for future use
     try {
       localStorage.setItem('sharedStudyUser', JSON.stringify(newUser));
     } catch (e) {
@@ -79,19 +68,78 @@ Despite their promise, quantum computers face significant challenges. Qubits are
     return newUser;
   });
 
-  // Study stats
-  const [stats] = useState({
-    completedQuizzes: 12,
-    averageScore: 87,
-    totalStudyTime: 340,
-    currentStreak: 7
-  });
+  // Load material from context or localStorage
+  useEffect(() => {
+    const loadMaterial = () => {
+      // Priority 1: Study context data
+      if (studyData?.content) {
+        setMaterial(studyData.content);
+        return;
+      }
+
+      // Priority 2: Local storage
+      const savedMaterial = localStorage.getItem('studyMaterial');
+      if (savedMaterial) {
+        setMaterial(savedMaterial);
+        return;
+      }
+
+      // Priority 3: Fallback to empty state
+      setMaterial('No study material found. Please upload a PDF or document to get started.');
+    };
+
+    loadMaterial();
+  }, [studyData]);
+
+  // Filter material based on search and bookmarks
+  useEffect(() => {
+    if (!material) return;
+
+    const paragraphs = material.split('\n\n').filter(para => para.trim());
+    
+    let filtered = paragraphs;
+    
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(para => 
+        para.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    // Apply bookmark filter
+    if (showOnlyBookmarked) {
+      filtered = filtered.filter((_, index) => bookmarkedParagraphs.has(index));
+    }
+    
+    setFilteredMaterial(filtered);
+    
+    // Calculate reading progress
+    const totalParagraphs = paragraphs.length;
+    const readParagraphs = Array.from(bookmarkedParagraphs).length;
+    setReadingProgress(totalParagraphs > 0 ? (readParagraphs / totalParagraphs) * 100 : 0);
+  }, [material, searchTerm, showOnlyBookmarked, bookmarkedParagraphs]);
 
   // Update clock every second
   useEffect(() => {
-    const interval = setInterval(() => setCurrentTime(Date.now()), 1000);
+    const interval = setInterval(() => {
+      if (!isPaused) {
+        setCurrentTime(Date.now());
+      }
+    }, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isPaused]);
+
+  // Auto-read functionality
+  useEffect(() => {
+    if (autoRead && filteredMaterial.length > 0 && currentParagraph < filteredMaterial.length) {
+      const timer = setTimeout(() => {
+        speakText(filteredMaterial[currentParagraph]);
+        setCurrentParagraph(prev => prev + 1);
+      }, 3000); // 3 seconds per paragraph
+
+      return () => clearTimeout(timer);
+    }
+  }, [autoRead, currentParagraph, filteredMaterial]);
 
   // Calculate elapsed time
   const elapsedMs = currentTime - sessionStartTime;
@@ -111,27 +159,39 @@ Despite their promise, quantum computers face significant challenges. Qubits are
   // Text-to-speech
   const speakText = useCallback((text) => {
     if (!('speechSynthesis' in window)) {
-      toast.error('Text-to-speech not supported in this browser');
+      console.error('Text-to-speech not supported');
       return;
     }
     
     if (isSpeaking) {
       window.speechSynthesis.cancel();
       setIsSpeaking(false);
+      setAutoRead(false);
       return;
     }
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.9;
-    utterance.onend = () => setIsSpeaking(false);
+    utterance.pitch = 1;
+    utterance.volume = 1;
+    
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      if (autoRead && currentParagraph >= filteredMaterial.length - 1) {
+        setAutoRead(false);
+        setCurrentParagraph(0);
+      }
+    };
+    
     utterance.onerror = () => {
       setIsSpeaking(false);
-      toast.error('Speech failed');
+      setAutoRead(false);
+      console.error('Speech synthesis failed');
     };
     
     window.speechSynthesis.speak(utterance);
     setIsSpeaking(true);
-  }, [isSpeaking]);
+  }, [isSpeaking, autoRead, currentParagraph, filteredMaterial.length]);
 
   // Text selection handler
   const handleTextSelection = useCallback(() => {
@@ -139,7 +199,7 @@ Despite their promise, quantum computers face significant challenges. Qubits are
       const sel = window.getSelection();
       const text = sel?.toString().trim() || '';
       
-      if (text.length > 10) {
+      if (text.length > 5) { // Reduced minimum length for better UX
         setSelectedText(text);
         const range = sel.getRangeAt(0);
         const rect = range.getBoundingClientRect();
@@ -165,34 +225,25 @@ Despite their promise, quantum computers face significant challenges. Qubits are
     };
   }, [handleTextSelection]);
 
-  // FIXED: Shared session function with proper error handling
+  // Shared session function
   const startSharedSession = async () => {
-    // Prevent multiple clicks
-    if (isCreatingRoom) {
-      console.log('Already creating room, ignoring click');
-      return;
-    }
+    if (isCreatingRoom) return;
 
-    // Validate user data
     if (!currentUser || !currentUser.id || !currentUser.name) {
-      toast.error('User information missing. Please refresh the page.');
+      console.error('User information missing');
       return;
     }
 
-    // Validate API base URL
     if (!API_BASE) {
-      toast.error('API configuration missing. Check .env file.');
-      console.error('VITE_API_BASE_URL not set');
+      console.error('API configuration missing');
       return;
     }
 
     setIsCreatingRoom(true);
     
     try {
-      console.log('Creating room with user:', currentUser);
-      
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
 
       const response = await fetch(`${API_BASE}/api/rooms/create`, {
         method: 'POST',
@@ -201,7 +252,7 @@ Despite their promise, quantum computers face significant challenges. Qubits are
           'Accept': 'application/json'
         },
         body: JSON.stringify({
-          docName: 'Quantum Computing Study',
+          docName: 'Study Session',
           hostId: currentUser.id,
           hostName: currentUser.name,
           isPrivate: false,
@@ -211,25 +262,12 @@ Despite their promise, quantum computers face significant challenges. Qubits are
 
       clearTimeout(timeoutId);
 
-      // Check response status
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Room creation failed:', response.status, errorText);
-        
-        let errorMessage = 'Failed to create room';
-        try {
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.error || errorMessage;
-        } catch (e) {
-          // Use default message
-        }
-        
-        throw new Error(errorMessage);
+        throw new Error(errorText || 'Failed to create room');
       }
 
       const data = await response.json();
-      
-      console.log('Room created successfully:', data);
       
       if (!data.success || !data.roomId) {
         throw new Error('Invalid response from server');
@@ -243,19 +281,9 @@ Despite their promise, quantum computers face significant challenges. Qubits are
       });
       
       setSharedMode(true);
-      toast.success('Shared session created! 🎉');
 
     } catch (error) {
       console.error('Create room error:', error);
-      
-      if (error.name === 'AbortError') {
-        toast.error('Request timeout. Check your connection.');
-      } else if (error.message.includes('fetch')) {
-        toast.error('Cannot connect to server. Is it running?');
-      } else {
-        toast.error(error.message || 'Failed to start shared session');
-      }
-      
     } finally {
       setIsCreatingRoom(false);
     }
@@ -275,13 +303,38 @@ Despite their promise, quantum computers face significant challenges. Qubits are
   };
 
   const exportNotes = () => {
-    const blob = new Blob([material || ''], { type: 'text/plain;charset=utf-8' });
+    if (!material) return;
+    
+    const blob = new Blob([material], { type: 'text/plain;charset=utf-8' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `quantum-computing-notes-${Date.now()}.txt`;
+    a.download = `study-notes-${Date.now()}.txt`;
     a.click();
     URL.revokeObjectURL(a.href);
-    toast.success('Notes exported!');
+  };
+
+  const toggleAutoRead = () => {
+    setAutoRead(!autoRead);
+    if (!autoRead) {
+      setCurrentParagraph(0);
+    } else {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    }
+  };
+
+  const resetSession = () => {
+    setBookmarkedParagraphs(new Set());
+    setReadingProgress(0);
+    setCurrentParagraph(0);
+    setAutoRead(false);
+    setIsSpeaking(false);
+    window.speechSynthesis.cancel();
+  };
+
+  const scrollToParagraph = (index) => {
+    const element = document.querySelector(`[data-paragraph="${index}"]`);
+    element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
 
   return (
@@ -291,7 +344,7 @@ Despite their promise, quantum computers face significant challenges. Qubits are
         {/* MAIN CONTENT - 2/3 width */}
         <div className="lg:col-span-2 space-y-5">
           
-          {/* Header */}
+          {/* Enhanced Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -301,21 +354,20 @@ Despite their promise, quantum computers face significant challenges. Qubits are
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md">
-                    <BookOpen className="w-6 h-6" />
+                    <FileText className="w-6 h-6" />
                   </div>
                   <div>
                     <h1 className="text-xl font-bold text-gray-900">
-                      Quantum Computing Basics
+                      {studyData?.title || 'Study Material'}
                     </h1>
                     <p className="text-sm text-gray-500 flex items-center gap-2 mt-0.5">
                       <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                      Select text to ask questions
+                      Select text to ask questions • {filteredMaterial.length} sections
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  {/* FIXED: Start Shared Session Button */}
                   <motion.button
                     whileHover={!isCreatingRoom ? { scale: 1.02 } : {}}
                     whileTap={!isCreatingRoom ? { scale: 0.98 } : {}}
@@ -354,11 +406,12 @@ Despite their promise, quantum computers face significant challenges. Qubits are
               </div>
             </div>
 
-            {/* Reading Controls */}
-            <div className="px-6 py-3 bg-gray-50/50 border-b border-gray-100">
+            {/* Enhanced Reading Controls */}
+            <div className="px-6 py-4 bg-gray-50/50 border-b border-gray-100">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-1.5 border border-gray-200 shadow-sm">
+                <div className="flex items-center gap-4">
+                  {/* Font Size Controls */}
+                  <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 border border-gray-200 shadow-sm">
                     <span className="text-xs text-gray-600 font-medium">Size:</span>
                     {['sm', 'base', 'lg', 'xl'].map(size => (
                       <button
@@ -375,87 +428,183 @@ Despite their promise, quantum computers face significant challenges. Qubits are
                     ))}
                   </div>
 
+                  {/* Search Bar */}
+                  <div className="relative">
+                    <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Search content..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-48"
+                    />
+                  </div>
+
+                  {/* Bookmark Filter */}
                   <button
-                    onClick={() => speakText(material)}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-all ${
-                      isSpeaking 
-                        ? 'bg-red-50 border-red-300 text-red-600' 
+                    onClick={() => setShowOnlyBookmarked(!showOnlyBookmarked)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all ${
+                      showOnlyBookmarked
+                        ? 'bg-amber-50 border-amber-300 text-amber-700'
                         : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
                     }`}
                   >
-                    <Volume2 className="w-4 h-4" />
-                    {isSpeaking ? 'Stop' : 'Read'}
+                    <Bookmark className={`w-4 h-4 ${showOnlyBookmarked ? 'fill-amber-500' : ''}`} />
+                    Bookmarks
                   </button>
                 </div>
 
-                <button
-                  onClick={exportNotes}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 text-sm transition-colors"
-                >
-                  <Download className="w-4 h-4" />
-                  Export
-                </button>
+                <div className="flex items-center gap-2">
+                  {/* Auto Read */}
+                  <button
+                    onClick={toggleAutoRead}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all ${
+                      autoRead
+                        ? 'bg-green-50 border-green-300 text-green-700'
+                        : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {autoRead ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                    Auto Read
+                  </button>
+
+                  {/* Reset Session */}
+                  <button
+                    onClick={resetSession}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 text-sm transition-colors"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    Reset
+                  </button>
+
+                  <button
+                    onClick={exportNotes}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 text-sm transition-colors"
+                  >
+                    <Download className="w-4 h-4" />
+                    Export
+                  </button>
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="mt-3">
+                <div className="flex justify-between text-xs text-gray-500 mb-1">
+                  <span>Reading Progress</span>
+                  <span>{Math.round(readingProgress)}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${readingProgress}%` }}
+                    className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-500"
+                  />
+                </div>
               </div>
             </div>
 
-            {/* Reading Content */}
+            {/* Enhanced Reading Content */}
             <div className="p-6">
-              <div
-                ref={selectionRef}
-                className={`${fontSizes[fontSize]} text-gray-700 space-y-4 max-h-[600px] overflow-y-auto pr-2`}
-                style={{ scrollbarWidth: 'thin' }}
-              >
-                {material.split('\n\n').map((para, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                    className={`relative group p-4 rounded-xl transition-all ${
-                      bookmarkedParagraphs.has(i)
-                        ? 'bg-amber-50 border border-amber-200'
-                        : 'hover:bg-blue-50/40'
-                    }`}
+              {!material ? (
+                <div className="text-center py-12 text-gray-500">
+                  <FileText className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                  <p>No study material found.</p>
+                  <p className="text-sm">Please upload a PDF to get started.</p>
+                </div>
+              ) : filteredMaterial.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <Search className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                  <p>No content matches your search.</p>
+                  <button
+                    onClick={() => {
+                      setSearchTerm('');
+                      setShowOnlyBookmarked(false);
+                    }}
+                    className="text-blue-600 hover:text-blue-700 text-sm font-medium mt-2"
                   >
-                    <p>{para}</p>
-                    
-                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                      <button
-                        onClick={() => toggleBookmark(i)}
-                        className={`p-1.5 rounded-lg transition-colors ${
-                          bookmarkedParagraphs.has(i)
-                            ? 'bg-amber-100 text-amber-600'
-                            : 'bg-white text-gray-400 hover:bg-amber-50 hover:text-amber-600'
-                        }`}
-                      >
-                        <Bookmark className={`w-3.5 h-3.5 ${bookmarkedParagraphs.has(i) ? 'fill-current' : ''}`} />
-                      </button>
-                      
-                      <button
-                        onClick={() => speakText(para)}
-                        className="p-1.5 rounded-lg bg-white text-gray-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                      >
-                        <Volume2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
+                    Clear filters
+                  </button>
+                </div>
+              ) : (
+                <div
+                  ref={selectionRef}
+                  className={`${fontSizes[fontSize]} text-gray-700 space-y-6 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar`}
+                >
+                  {filteredMaterial.map((para, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.05 }}
+                      data-paragraph={i}
+                      className={`relative group p-6 rounded-2xl transition-all duration-300 border ${
+                        bookmarkedParagraphs.has(i)
+                          ? 'bg-amber-50 border-amber-200 shadow-sm'
+                          : 'bg-white border-gray-200 hover:shadow-md hover:border-gray-300'
+                      } ${autoRead && currentParagraph === i ? 'ring-2 ring-blue-500 ring-opacity-50' : ''}`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="leading-relaxed">{para}</p>
+                          
+                          {/* Word count and reading time */}
+                          <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
+                            <span>{para.split(' ').length} words</span>
+                            <span>•</span>
+                            <span>{Math.ceil(para.split(' ').length / 200)} min read</span>
+                          </div>
+                        </div>
+                        
+                        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                          <button
+                            onClick={() => toggleBookmark(i)}
+                            className={`p-2 rounded-lg transition-colors ${
+                              bookmarkedParagraphs.has(i)
+                                ? 'bg-amber-100 text-amber-600'
+                                : 'bg-white text-gray-400 hover:bg-amber-50 hover:text-amber-600'
+                            }`}
+                          >
+                            <Bookmark className={`w-4 h-4 ${bookmarkedParagraphs.has(i) ? 'fill-current' : ''}`} />
+                          </button>
+                          
+                          <button
+                            onClick={() => speakText(para)}
+                            className={`p-2 rounded-lg transition-colors ${
+                              isSpeaking 
+                                ? 'bg-red-100 text-red-600' 
+                                : 'bg-white text-gray-400 hover:bg-blue-50 hover:text-blue-600'
+                            }`}
+                          >
+                            <Volume2 className="w-4 h-4" />
+                          </button>
+
+                          <button
+                            onClick={() => scrollToParagraph(i)}
+                            className="p-2 rounded-lg bg-white text-gray-400 hover:bg-green-50 hover:text-green-600 transition-colors"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
             </div>
           </motion.div>
         </div>
 
-        {/* SIDEBAR - 1/3 width */}
+        {/* ENHANCED SIDEBAR - 1/3 width */}
         <div className="lg:col-span-1 space-y-5">
           
-          {/* Simple Clock Card */}
+          {/* Enhanced Clock Card */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
             className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg border border-gray-100"
           >
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white">
                   <Clock className="w-5 h-5" />
@@ -467,10 +616,23 @@ Despite their promise, quantum computers face significant challenges. Qubits are
                   </div>
                 </div>
               </div>
+              <button
+                onClick={() => setIsPaused(!isPaused)}
+                className={`p-2 rounded-lg transition-colors ${
+                  isPaused 
+                    ? 'bg-green-100 text-green-600' 
+                    : 'bg-gray-100 text-gray-600'
+                }`}
+              >
+                {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+              </button>
+            </div>
+            <div className="text-xs text-gray-500">
+              {isPaused ? 'Timer paused' : 'Timer running'}
             </div>
           </motion.div>
 
-          {/* Stats Card */}
+          {/* Quick Stats Card */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -478,35 +640,35 @@ Despite their promise, quantum computers face significant challenges. Qubits are
             className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg border border-gray-100"
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-gray-900">Progress</h3>
+              <h3 className="text-base font-bold text-gray-900">Session Stats</h3>
               <div className="text-xs text-gray-500 bg-gray-100 rounded-full px-2 py-0.5">
-                Streak: <span className="font-semibold text-gray-700">{stats.currentStreak}d</span>
+                Progress: <span className="font-semibold text-gray-700">{Math.round(readingProgress)}%</span>
               </div>
             </div>
 
             <div className="space-y-3">
               <StatItem 
-                icon={<Target className="w-4 h-4" />} 
-                label="Quizzes" 
-                value={stats.completedQuizzes} 
+                icon={<Bookmark className="w-4 h-4" />} 
+                label="Bookmarks" 
+                value={bookmarkedParagraphs.size} 
+                color="from-amber-500 to-orange-500"
+              />
+              <StatItem 
+                icon={<FileText className="w-4 h-4" />} 
+                label="Sections" 
+                value={filteredMaterial.length} 
                 color="from-blue-500 to-cyan-500"
               />
               <StatItem 
-                icon={<Zap className="w-4 h-4" />} 
-                label="Avg Score" 
-                value={`${stats.averageScore}%`} 
+                icon={<Target className="w-4 h-4" />} 
+                label="Words" 
+                value={material ? material.split(' ').length : 0} 
                 color="from-green-500 to-emerald-500"
-              />
-              <StatItem 
-                icon={<Trophy className="w-4 h-4" />} 
-                label="Total Time" 
-                value={`${stats.totalStudyTime}m`} 
-                color="from-purple-500 to-pink-500"
               />
             </div>
           </motion.div>
 
-          {/* AI Assistant Card */}
+          {/* Enhanced AI Assistant Card */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -565,7 +727,7 @@ Despite their promise, quantum computers face significant challenges. Qubits are
             </div>
           </motion.div>
 
-          {/* Study Tips */}
+          {/* Enhanced Study Tips */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -578,17 +740,63 @@ Despite their promise, quantum computers face significant challenges. Qubits are
                 icon={<Clock className="w-4 h-4" />}
                 title="Pomodoro Method"
                 description="25 min focus, 5 min break"
+                action={() => setIsPaused(!isPaused)}
+                actionText={isPaused ? 'Resume' : 'Pause'}
               />
               <TipItem 
                 icon={<Highlighter className="w-4 h-4" />}
                 title="Active Recall"
                 description="Test yourself frequently"
+                action={() => window.location.href = '/quiz'}
+                actionText="Take Quiz"
               />
               <TipItem 
                 icon={<Brain className="w-4 h-4" />}
                 title="Spaced Repetition"
                 description="Review at intervals"
+                action={() => setAutoRead(!autoRead)}
+                actionText={autoRead ? 'Stop Auto' : 'Auto Read'}
               />
+            </div>
+          </motion.div>
+
+          {/* Quick Actions */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg border border-gray-100"
+          >
+            <h4 className="text-base font-bold text-gray-900 mb-3">Quick Actions</h4>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={resetSession}
+                className="p-3 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 text-sm font-medium transition-colors flex flex-col items-center gap-1"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Reset
+              </button>
+              <button
+                onClick={exportNotes}
+                className="p-3 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 text-sm font-medium transition-colors flex flex-col items-center gap-1"
+              >
+                <Download className="w-4 h-4" />
+                Export
+              </button>
+              <button
+                onClick={() => setShowOnlyBookmarked(!showOnlyBookmarked)}
+                className="p-3 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 text-sm font-medium transition-colors flex flex-col items-center gap-1"
+              >
+                <Bookmark className="w-4 h-4" />
+                Bookmarks
+              </button>
+              <button
+                onClick={toggleAutoRead}
+                className="p-3 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 text-sm font-medium transition-colors flex flex-col items-center gap-1"
+              >
+                {autoRead ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                Auto Read
+              </button>
             </div>
           </motion.div>
         </div>
@@ -673,16 +881,24 @@ function StatItem({ icon, label, value, color }) {
   );
 }
 
-function TipItem({ icon, title, description }) {
+function TipItem({ icon, title, description, action, actionText }) {
   return (
     <div className="flex items-start gap-2.5 p-3 rounded-xl bg-gradient-to-br from-gray-50/50 to-blue-50/30 border border-gray-100 hover:border-blue-200 transition-colors">
       <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0">
         {icon}
       </div>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <div className="text-sm font-semibold text-gray-900">{title}</div>
         <div className="text-xs text-gray-600 mt-0.5">{description}</div>
       </div>
+      {action && (
+        <button
+          onClick={action}
+          className="text-xs bg-blue-600 text-white px-2 py-1 rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          {actionText}
+        </button>
+      )}
     </div>
   );
 }
