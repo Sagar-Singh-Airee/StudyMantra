@@ -5,7 +5,6 @@ import { CheckCircle, XCircle, ArrowRight, Loader, Trophy, Star, TrendingUp } fr
 import { motion, AnimatePresence } from 'framer-motion';
 import { generateQuizFromText } from '../utils/quizGenerator';
 import { useStudySession } from '../context/StudySessionContext';
-import toast from 'react-hot-toast';
 
 function Quiz() {
   const navigate = useNavigate();
@@ -25,7 +24,6 @@ function Quiz() {
   useEffect(() => {
     const material = localStorage.getItem('studyMaterial');
     if (!material) {
-      toast.error('No study material found!');
       navigate('/upload');
       return;
     }
@@ -52,14 +50,12 @@ function Quiz() {
           if (data.questions && data.questions.length > 0) {
             setQuestions(data.questions);
             setLoading(false);
-            toast.success('AI Quiz generated successfully!');
             return;
           } else {
             throw new Error('No questions returned from AI');
           }
         } catch (error) {
           console.error('AI quiz failed, falling back to local:', error);
-          toast.error('AI quiz failed, using local generation');
         }
       }
 
@@ -69,7 +65,6 @@ function Quiz() {
         setQuestions(quiz);
         setLoading(false);
       } catch (error) {
-        toast.error('Failed to generate quiz!');
         navigate('/study');
       }
     };
@@ -132,16 +127,6 @@ function Quiz() {
           >
             {useAI ? 'Generating AI Quiz...' : 'Generating Quiz...'}
           </motion.p>
-          {useAI && (
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="text-sm text-gray-500 mt-2"
-            >
-              This may take a few seconds
-            </motion.p>
-          )}
         </div>
       </div>
     );

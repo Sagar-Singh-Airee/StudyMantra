@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import AgoraRTC from 'agora-rtc-sdk-ng';
 import {
   Video, VideoOff, Mic, MicOff, PhoneOff, Monitor, MonitorOff,
-  Volume2, Settings, Wifi, WifiOff, Users, Loader, AlertCircle
+  Volume2, Settings, Users
 } from 'lucide-react';
 
 // Config from env
@@ -35,13 +35,11 @@ export default function VideoCall({
 
   // State
   const [connectionState, setConnectionState] = useState(ConnectionState.DISCONNECTED);
-  const [error, setError] = useState(null);
   const [localUid, setLocalUid] = useState(null);
   const [remoteUsers, setRemoteUsers] = useState(new Map());
   const [videoEnabled, setVideoEnabled] = useState(true);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
-  const [networkQuality, setNetworkQuality] = useState({ uplink: 0, downlink: 0 });
   const [availableDevices, setAvailableDevices] = useState({ cameras: [], microphones: [] });
   const [selectedDevices, setSelectedDevices] = useState({ camera: null, microphone: null });
   const [showSettings, setShowSettings] = useState(false);
@@ -54,8 +52,6 @@ export default function VideoCall({
 
   // --- Helpers ---
   const showError = useCallback((message) => {
-    setError(message);
-    setTimeout(() => setError(null), 5000);
     console.error('[VideoCall] ', message);
   }, []);
 
@@ -203,7 +199,6 @@ export default function VideoCall({
       // Map SDK states to our enum roughly
       if (curState === 'CONNECTED' || curState === 'connected') {
         setConnectionState(ConnectionState.CONNECTED);
-        setError(null);
       } else if (curState === 'DISCONNECTED' || curState === 'disconnected') {
         setConnectionState(ConnectionState.DISCONNECTED);
         // attempt reconnect
@@ -215,13 +210,12 @@ export default function VideoCall({
       }
     };
 
-    const handleNetworkQuality = (stats) => {
-      setNetworkQuality({ uplink: stats.uplinkNetworkQuality, downlink: stats.downlinkNetworkQuality });
+    const handleNetworkQuality = () => {
+      // Network quality tracking removed
     };
 
     const handleException = (ev) => {
       console.warn('[Agora exception]', ev);
-      if (ev?.code === 'DEVICE_NOT_FOUND') showError('Camera or microphone not found');
     };
 
     // Register events
@@ -229,7 +223,6 @@ export default function VideoCall({
     client.on('user-unpublished', handleUserUnpublished);
     client.on('user-left', handleUserLeft);
     client.on && client.on('connection-state-change', handleConnectionStateChange);
-    client.on && client.on('network-quality', handleNetworkQuality);
     client.on && client.on('exception', handleException);
 
     // Auto-join helper
@@ -267,7 +260,6 @@ export default function VideoCall({
         await client.publish([audioTrack, videoTrack]);
 
         setConnectionState(ConnectionState.CONNECTED);
-        setError(null);
 
         // start stats
         startStatsCollection();
@@ -446,66 +438,9 @@ export default function VideoCall({
   // Convert remoteUsers Map to array for rendering
   const remoteUserArray = useMemo(() => Array.from(remoteUsers.values()), [remoteUsers]);
 
-  // Debug panel
-  const DebugPanel = () => (
-    <div className="fixed top-4 left-4 bg-black/80 text-xs p-3 rounded-lg z-50 border border-gray-700 backdrop-blur-sm">
-      <div className="font-bold mb-1 text-green-400">Debug Info</div>
-      <div>State: <span className="font-mono">{connectionState}</span></div>
-      <div>Error: <span className="font-mono text-red-400">{error || 'none'}</span></div>
-      <div>Local UID: <span className="font-mono">{localUid || 'none'}</span></div>
-      <div>Remote Users: <span className="font-mono">{remoteUsers.size}</span></div>
-      <div>App ID: <span className="font-mono">{appId ? '✓ Set' : '✗ Missing'}</span></div>
-    </div>
-  );
-
   // Render
   return (
     <div className="h-screen bg-[#0a0a0a] text-white flex flex-col">
-      <DebugPanel />
-
-      {/* Header */}
-      <div className="bg-[#151515] border-b border-gray-800 p-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <div className={`w-3 h-3 rounded-full ${
-              connectionState === ConnectionState.CONNECTED ? 'bg-green-500' :
-              connectionState === ConnectionState.CONNECTING ? 'bg-yellow-500 animate-pulse' :
-              connectionState === ConnectionState.RECONNECTING ? 'bg-orange-500 animate-pulse' :
-              'bg-red-500'
-            }`} />
-            <span className="text-sm font-medium">
-              {connectionState === ConnectionState.CONNECTED ? 'Connected' :
-               connectionState === ConnectionState.CONNECTING ? 'Connecting...' :
-               connectionState === ConnectionState.RECONNECTING ? 'Reconnecting...' :
-               'Disconnected'}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2 text-sm text-gray-400">
-            <Users size={16} />
-            <span>{remoteUserArray.length + 1}</span>
-          </div>
-
-          <div className={`flex items-center gap-1 text-sm ${networkQuality.uplink <= 2 ? 'text-green-500' : 'text-yellow-400'}`}>
-            {networkQuality.uplink <= 2 ? <Wifi size={16} /> : <WifiOff size={16} />}
-            <span className="text-xs">{networkQuality.uplink === 0 ? '...' : `${networkQuality.uplink}/6`}</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button type="button" onClick={() => setShowStats(s => !s)} className="p-2 hover:bg-white/5 rounded-lg">📊</button>
-          <button type="button" onClick={() => setShowSettings(s => !s)} className="p-2 hover:bg-white/5 rounded-lg"><Settings size={20} /></button>
-        </div>
-      </div>
-
-      {/* Error banner */}
-      {error && (
-        <div className="bg-red-500/20 border border-red-500/50 p-3 flex items-center gap-2 text-sm">
-          <AlertCircle size={16} />
-          <span>{error}</span>
-        </div>
-      )}
-
       {/* Main Grid */}
       <div className="flex-1 overflow-auto p-4">
         <div className={`grid gap-4 h-full ${
@@ -522,7 +457,6 @@ export default function VideoCall({
             isScreenSharing={isScreenSharing}
             userName={userName}
             isSpeaking={speakingUsers.has('local')}
-            connectionState={connectionState}
           />
 
           {/* Remote */}
@@ -559,6 +493,10 @@ export default function VideoCall({
           <button type="button" onClick={leaveCall} className="p-4 rounded-full bg-red-600 hover:bg-red-700" title="Leave call">
             <PhoneOff size={24} />
           </button>
+
+          <button type="button" onClick={() => setShowSettings(s => !s)} className="p-4 rounded-full bg-white/10 hover:bg-white/20" title="Settings">
+            <Settings size={24} />
+          </button>
         </div>
       </div>
 
@@ -592,7 +530,7 @@ export default function VideoCall({
 // ---------------------------------------------------
 // Local and Remote card components (kept features)
 // ---------------------------------------------------
-function LocalVideoCard({ containerRef, tracksRef, videoEnabled, isScreenSharing, userName, isSpeaking, connectionState }) {
+function LocalVideoCard({ containerRef, tracksRef, videoEnabled, isScreenSharing, userName, isSpeaking }) {
   const cRef = containerRef || React.createRef();
 
   useEffect(() => {
@@ -617,12 +555,6 @@ function LocalVideoCard({ containerRef, tracksRef, videoEnabled, isScreenSharing
           </div>
         )}
       </div>
-
-      {connectionState === ConnectionState.CONNECTING && (
-        <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
-          <Loader className="animate-spin" size={32} />
-        </div>
-      )}
 
       <div className="absolute bottom-3 left-3 flex items-center gap-2">
         <div className="bg-black/70 backdrop-blur-sm text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2">
