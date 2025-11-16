@@ -1,4 +1,4 @@
-// src/App.jsx
+// src/App.jsx - UPDATED (No Sidebar)
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
@@ -6,7 +6,6 @@ import { StudySessionProvider } from './context/StudySessionContext';
 import { AuthProvider } from './context/AuthContext';
 
 // Layout Components
-import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 
 // Pages
@@ -17,11 +16,9 @@ import StudySession from './pages/StudySession';
 import Quiz from './pages/Quiz';
 import Analytics from './pages/Analytics';
 import VideoRoom from './pages/VideoRoom';
-
-// New/Additional Pages
 import AssistantPage from './pages/AssistantPage';
 import JoinRoom from './pages/JoinRoom';
-import Settings from './pages/Settings'; // <-- ADDED: Settings page
+import Settings from './pages/Settings';
 
 function App() {
   return (
@@ -41,40 +38,28 @@ function App() {
             }}
           />
 
-          {/* Main Layout */}
-          <div className="min-h-screen flex bg-[var(--google-bg)]">
+          {/* Main Layout - NO SIDEBAR */}
+          <div className="min-h-screen bg-gradient-to-br from-[#0F1C3F] via-[#1A2642] to-[#2D3E6F]">
 
-            {/* Sidebar */}
-            <Sidebar />
+            {/* Header */}
+            <Header />
 
-            {/* Main Area */}
-            <div className="flex-1 p-6">
-              <Header />
+            {/* Page Content */}
+            <main className="container mx-auto px-4 py-6">
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/setup" element={<SetupGoals />} />
+                <Route path="/upload" element={<UploadPDF />} />
+                <Route path="/study" element={<StudySession />} />
+                <Route path="/quiz" element={<Quiz />} />
+                <Route path="/analytics" element={<Analytics />} />
+                <Route path="/video" element={<VideoRoom />} />
+                <Route path="/assistant" element={<AssistantPage />} />
+                <Route path="/join/:roomId" element={<JoinRoom />} />
+                <Route path="/settings" element={<Settings />} />
+              </Routes>
+            </main>
 
-              {/* Page Content */}
-              <main className="mt-4">
-                <Routes>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/setup" element={<SetupGoals />} />
-                  <Route path="/upload" element={<UploadPDF />} />
-                  <Route path="/study" element={<StudySession />} />
-                  <Route path="/quiz" element={<Quiz />} />
-                  <Route path="/analytics" element={<Analytics />} />
-                  <Route path="/video" element={<VideoRoom />} />
-
-                  {/* Assistant & Join Room */}
-                  <Route path="/assistant" element={<AssistantPage />} />
-                  <Route path="/join/:roomId" element={<JoinRoom />} />
-
-                  {/* Settings */}
-                  <Route path="/settings" element={<Settings />} />
-
-                  {/* Optional: fallback 404 route (uncomment if you add a NotFound page) */}
-                  {/* <Route path="*" element={<NotFound />} /> */}
-                </Routes>
-              </main>
-
-            </div>
           </div>
 
         </Router>
