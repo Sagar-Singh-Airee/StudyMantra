@@ -1,7 +1,7 @@
-// src/pages/UploadPDF.jsx
+// src/pages/UploadPDF.jsx - COMPLETE TEMPLATE REDESIGN
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UploadCloud, FileText, Loader, CheckCircle, AlertCircle, X, Sparkles } from 'lucide-react';
+import { UploadCloud, FileText, Loader, CheckCircle, AlertCircle, X, Sparkles, Brain, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { extractTextFromPDF } from '../utils/pdfExtractor';
@@ -93,11 +93,16 @@ export default function UploadPDF() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-[#F8F9FA] relative overflow-hidden">
+      
+      {/* Decorative background blobs */}
+      <div className="absolute top-20 right-20 w-96 h-96 bg-blue-200/30 rounded-full blur-3xl" />
+      <div className="absolute bottom-20 left-20 w-96 h-96 bg-purple-200/30 rounded-full blur-3xl" />
+      
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-3xl w-full"
+        className="max-w-3xl w-full relative z-10"
       >
         {/* Header */}
         <div className="text-center mb-8">
@@ -120,7 +125,7 @@ export default function UploadPDF() {
         </div>
 
         {/* Upload Card */}
-        <div className="bg-white rounded-3xl p-8 shadow-2xl border border-gray-100">
+        <div className="card-enhanced p-8 mb-6">
           {/* Drag & Drop Zone */}
           <div
             onDragEnter={handleDrag}
@@ -129,7 +134,7 @@ export default function UploadPDF() {
             onDrop={handleDrop}
             className={`relative border-2 border-dashed rounded-2xl p-12 mb-6 transition-all ${
               dragActive
-                ? 'border-blue-500 bg-blue-50'
+                ? 'border-blue-500 bg-blue-50 scale-[1.02]'
                 : file
                 ? 'border-green-500 bg-green-50'
                 : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
@@ -174,6 +179,8 @@ export default function UploadPDF() {
                       Choose PDF File
                     </motion.div>
                   </label>
+                  
+                  <p className="text-xs text-gray-500 mt-4">Maximum file size: 50MB • PDF format only</p>
                 </motion.div>
               ) : (
                 <motion.div
@@ -187,10 +194,10 @@ export default function UploadPDF() {
                       <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white shadow-lg">
                         <FileText className="w-7 h-7" />
                       </div>
-                      <div className="flex-1">
-                        <h4 className="font-bold text-gray-900 text-lg">{file.name}</h4>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-bold text-gray-900 text-lg truncate">{file.name}</h4>
                         <p className="text-sm text-gray-600">
-                          {(file.size / 1024 / 1024).toFixed(2)} MB
+                          {(file.size / 1024 / 1024).toFixed(2)} MB • Ready to process
                         </p>
                       </div>
                     </div>
@@ -246,16 +253,16 @@ export default function UploadPDF() {
           </AnimatePresence>
 
           {/* Features List */}
-          <div className="mb-6 p-6 bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl">
+          <div className="mb-6 p-6 bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl border border-gray-100">
             <h4 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-blue-600" />
               What happens next?
             </h4>
             <div className="space-y-3">
               {[
-                { icon: <FileText />, text: "AI extracts text from your PDF" },
-                { icon: <Sparkles />, text: "Intelligent quiz generation" },
-                { icon: <CheckCircle />, text: "Ready for interactive study session" }
+                { icon: <FileText />, text: "AI extracts text from your PDF", color: "from-blue-500 to-cyan-500" },
+                { icon: <Brain />, text: "Intelligent quiz generation", color: "from-purple-500 to-pink-500" },
+                { icon: <Zap />, text: "Ready for interactive study session", color: "from-green-500 to-emerald-500" }
               ].map((item, i) => (
                 <motion.div
                   key={i}
@@ -264,8 +271,8 @@ export default function UploadPDF() {
                   transition={{ delay: i * 0.1 }}
                   className="flex items-center gap-3 text-gray-700"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-blue-600 shadow-sm">
-                    {item.icon}
+                  <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center text-white shadow-sm`}>
+                    {React.cloneElement(item.icon, { className: "w-5 h-5" })}
                   </div>
                   <span className="font-medium">{item.text}</span>
                 </motion.div>
@@ -304,11 +311,13 @@ export default function UploadPDF() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
-          className="mt-6 text-center text-sm text-gray-600"
+          className="text-center"
         >
-          <div className="flex items-center justify-center gap-2">
-            <AlertCircle className="w-4 h-4" />
-            <span>Supported format: PDF • Max size: 50MB</span>
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm border border-gray-100">
+            <AlertCircle className="w-4 h-4 text-blue-600" />
+            <span className="text-sm text-gray-600">
+              Supported format: PDF • Max size: 50MB • Text-based PDFs only
+            </span>
           </div>
         </motion.div>
       </motion.div>
